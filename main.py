@@ -1,6 +1,14 @@
 import random
 import math
 
+#
+#   Constants
+#
+STARTING_SUPPLIES = 7
+STARTING_MEDICINE = 0
+STARTING_DEFENSE = 3
+STARTING_DANGER = 1
+
 class Game:
     #
     #   Game Setup
@@ -12,20 +20,28 @@ class Game:
         self.base = self.make_base()
         self.day = 0
 
+    #
+    #   Creates player objects based on self.player_count
+    #
     def make_players(self):
         players = []
         for i in range(self.player_count):
-            name = raw_input('Enter name for Player ' + str(i+1) + ':')
+            name = ''
+            while name == '':
+                name = raw_input('Enter name for Player ' + str(i+1) + ': ')
             player = Player(name, self)
             players.append(player)
         return players
 
+    #
+    #   Creates a Base object
+    #
     def make_base(self):
-        names = ['Underground Bunker', 'Cabin Lodge', 'Penthouse Apartment', 'Backstage VIP Lounge']
+        names = ['underground bunker', 'cabin lodge', 'penthouse suite', 'backstage VIP lounge']
         return Base(random.choice(names), self.player_count, self)
 
     #
-    #   Utility functions
+    #   Splits players into sorted groups
     #
     def split_players(self, group_count):
         groups = []
@@ -38,6 +54,9 @@ class Game:
 
         return groups
 
+    #
+    #   Returns a list of players like so: 'A, B and C'
+    #
     def build_name_list(self, players):
         s = ''
         l = len(players)
@@ -46,7 +65,7 @@ class Game:
             if i < l - 2:
                 s += ', '
             elif i < l - 1:
-                s += ', and '
+                s += ' and '
         return s
 
     #
@@ -54,11 +73,21 @@ class Game:
     #
     def play(self):
         groups = self.split_players(2)
-        s = 'None of us expected the apocalypse to happen. Not here. Not now.\n'
-        s += 'Not with ' + self.monsters + '.\nBut it totally did.\n'
-        s += self.build_name_list(groups[0]) + ' made it to the ' + self.base.name + ' first. '
-        s += 'They barred the doors and waited with baited breath ... but nothing came for them.\n'
-        s += 'Over the next few days, ' + self.build_name_list(groups[1]) + ' showed up at the base.\n\n'
+        s = '\nNone of us expected the apocalypse to happen. Not here. Not now.\n'
+        s += 'Not with ' + self.monsters + '.\nBut it totally did.\n\n'
+
+        group1 = self.build_name_list(groups[0])
+        group2 = self.build_name_list(groups[1])
+
+        if group1 != '' and group2 != '':
+            s += group1 + ' made it to the ' + self.base.name + ' first.\n'
+            s += 'Over the next few days, ' + group2 + ' showed up at the base.\n\n'
+        elif group1 != '':
+            s += group1 + ' made it to the ' + self.base.name + ' first.\n'
+            s += 'They waited for other survivors ... but no one ever showed.\n\n'
+        else:
+            s += 'The ' + self.base.name + ' was left untouched for the first few days.\n'
+            s += 'Over the next few days, ' + group2 + ' showed up at the base.\n\n'
 
         for i in range(len(groups[0])):
             p = groups[0][i]
@@ -74,7 +103,7 @@ class Game:
             if t == 'injured' or t == 'infected':
                 s += p.name + ' looked hurt pretty badly, but we let them in anyway.\n'
 
-        s += 'There are ' + str(self.player_count) + ' of us in total.\n'
+        s += '\nThere are ' + str(self.player_count) + ' of us in total.\n'
         s += 'We have about ' + str(self.base.supplies) + \
              ' days of food and water for all of us ... but we\'ll need to forage soon.\n'
         s += 'Our defenses will only hold for ' + str(self.base.defense) + \
@@ -85,13 +114,12 @@ class Game:
         self.next_day()
 
     #
-    #   Game functions
+    #   Advance to the next day in the game
     #
-
-    # Advances to the next day in the game and prompts the player to make decisions
     def next_day(self):
         self.day += 1
 
+        # Check if game over
         if self.base.population == 0:
             print '----- GAME OVER -----'
             print 'Everyone is either dead or ' + self.monsters + '.'
@@ -112,6 +140,7 @@ class Game:
             if player.alive:
                 player.take_turn()
 
+        # Night time
         print 'The sun sits low in the sky, and we all gather together inside the ' + self.base.name\
               + ' to wait for nightfall...'
 
@@ -133,7 +162,9 @@ class Player:
         self.infected_days = 0
         self.traits = []
 
-    # Assigns a random starting trait to the survivor and returns its name
+    #
+    #   Assigns a random starting trait to the survivor and returns its name
+    #
     def pick_starting_trait(self):
         traits = ['injured', 'untrusted', 'trusted', 'lifesaver', 'calm', 'paranoid', 'pragmatic', 'violent', 'infected']
         t = random.choice(traits)
@@ -146,7 +177,9 @@ class Player:
             self.traits.append(t)
         return t
 
-    # Processes a turn for the character
+    #
+    #   Processes a turn for the character (player's choice)
+    #
     def take_turn(self):
         print '\n----- ' + self.name.upper() + ' -----'
 
@@ -176,10 +209,18 @@ class Player:
             else:
                 print self.name + ' doesn\'t look much better today.'
 
+            raw_input('\nPress enter to continue...\n')
+
+    #
+    #   Removes player from the game
+    #
     def die(self):
         self.alive = False
         self.game.base.population -= 1
 
+    #
+    #   Increments infection if necessary
+    #
     def check_infection(self):
         if self.infected:
             self.infected_days += 1
@@ -187,6 +228,9 @@ class Player:
             print self.name + ' has succumbed to the infection. There was nothing more we could do.'
             self.die()
 
+    #
+    #   Performs and returns the result of a player's choice during a turn
+    #
     def perform_action(self, action):
         action_roll = random.randint(0, 100)
         infection_roll = random.randint(0, 100)
@@ -202,10 +246,10 @@ class Player:
                 self.game.base.supplies += random.randint(1, 3)
                 self.game.base.medicine += random.randint(1, 2)
                 result = self.name + ' brought back some medicine from the pharmacy.'
-            elif action_roll > 50:
+            elif action_roll > 25:
                 self.game.base.supplies += random.randint(1, 3)
                 result = self.name + ' brought back a random assortment of supplies from town.'
-            elif action_roll > 25:
+            elif action_roll > 10:
                 result = self.name + ' couldn\'t find anything useful while scavenging.'
             else:
                 self.injured = True
@@ -213,13 +257,13 @@ class Player:
                     self.infected = True
                 result = self.name + ' was injured while looking for supplies.'
         elif action == 'Fortify base':
-            if action_roll > 50:
+            if action_roll > 25:
                 self.game.base.defense += random.randint(1, 3)
                 result = self.name + ' made some improvements to the base.'
             else:
                 result = self.name + ' didn\'t get much done around the base today.'
         elif action == 'Keep watch':
-            if action_roll > 50 and self.game.base.danger > 1:
+            if action_roll > 25 and self.game.base.danger > 1:
                 self.game.base.danger -= 1
                 result = self.name + ' kept watch all day and took out a few ' + self.game.monsters + '.'
             else:
@@ -228,9 +272,9 @@ class Player:
             self.rested = True
             result = self.name + ' stayed in today and tried to relax.'
         else:
-            if action_roll > 30:
+            if action_roll > 15:
                 result = self.name + ' took out a group of ' + self.game.monsters + ' wandering close to the base.'
-            elif action_roll > 15:
+            elif action_roll > 5:
                 self.injured = True
                 if infection_roll < 20:
                     self.infected = True
@@ -242,7 +286,9 @@ class Player:
         print result
         raw_input('\nPress enter to continue...\n')
 
-    # Returns a (mostly useless) string about how the character is doing
+    #
+    #  Returns a (mostly useless) string about how the character is doing
+    #
     def status_report(self):
         reports = [' seems calm today.',
                    ' seems nervous today.',
@@ -295,7 +341,8 @@ class Base:
         print 'There are ' + str(self.population) + ' of us left.'
         print 'We have ' + str(self.supplies) + ' days of food and water.'
         print 'We have ' + str(self.medicine) + ' medicine in stock.'
-        print 'Our defenses will hold for ' + str(math.floor(self.defense / self.danger)) + ' more nights.\n'
+        print 'Our defenses will hold for ' + str(int(math.floor(self.defense / self.danger))) + ' more nights.' +\
+              ' (' + str(self.defense) + ' defense / ' + str(self.danger) + ' danger)\n'
 
     def consume_supplies(self):
         self.supplies -= 1
@@ -303,7 +350,7 @@ class Base:
 
         danger_roll = random.randint(0, 100)
 
-        if danger_roll > 33:
+        if danger_roll > 50:
             self.danger += 1
             print 'The horde of ' + self.game.monsters + ' is getting thicker ...'
 
@@ -339,6 +386,11 @@ class Base:
 
 
 def main():
-    Game(4).play()
+    print '----- HELLO APOCALYPSE -----'
+    print 'Welcome to Hello Apocalypse!'
+    players = ''
+    while players not in ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10']:
+        players = raw_input('How many people are playing? (1-10) ')
+    Game(int(players)).play()
 
 main()

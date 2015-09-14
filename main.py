@@ -242,13 +242,18 @@ class Player:
             action_roll -= 15
 
         if action == 'Scavenge for supplies':
+            med_count = random.randint(1, 2)
+            supply_count = random.randint(1, 4)
             if action_roll > 75:
-                self.game.base.supplies += random.randint(1, 3)
-                self.game.base.medicine += random.randint(1, 2)
-                result = self.name + ' brought back some medicine from the pharmacy.'
+                self.game.base.supplies += supply_count
+                self.game.base.medicine += med_count
+                result = self.name + ' brought back some medicine and valuable goods.\n'
+                result += '+' + str(med_count) + ' medicine\n'
+                result += '+' + str(supply_count) + ' supplies'
             elif action_roll > 25:
-                self.game.base.supplies += random.randint(1, 3)
-                result = self.name + ' brought back a random assortment of supplies from town.'
+                self.game.base.supplies += supply_count
+                result = self.name + ' brought back a random assortment of supplies from town.\n'
+                result += '+' + str(supply_count) + ' supplies'
             elif action_roll > 10:
                 result = self.name + ' couldn\'t find anything useful while scavenging.'
             else:
@@ -257,23 +262,29 @@ class Player:
                     self.infected = True
                 result = self.name + ' was injured while looking for supplies.'
         elif action == 'Fortify base':
+            def_count = random.randint(1, 4)
             if action_roll > 25:
-                self.game.base.defense += random.randint(1, 3)
-                result = self.name + ' made some improvements to the base.'
+                self.game.base.defense += def_count
+                result = self.name + ' made some improvements to the base.\n'
+                result += '+' + str(def_count) + ' defense'
             else:
                 result = self.name + ' didn\'t get much done around the base today.'
         elif action == 'Keep watch':
             if action_roll > 25 and self.game.base.danger > 1:
                 self.game.base.danger -= 1
-                result = self.name + ' kept watch all day and took out a few ' + self.game.monsters + '.'
+                result = self.name + ' kept watch all day and took out a few ' + self.game.monsters + '.\n'
+                result += '-1 danger'
             else:
                 result = self.name + ' kept watch all day, but nothing came by.'
         elif action == 'Get some rest':
             self.rested = True
             result = self.name + ' stayed in today and tried to relax.'
         else:
+            kill_count = random.randint(2, 5)
             if action_roll > 15:
-                result = self.name + ' took out a group of ' + self.game.monsters + ' wandering close to the base.'
+                result = self.name + ' took out a group of ' + self.game.monsters + ' wandering close to the base.\n'
+                result += '-' + str(kill_count) + ' danger'
+                self.game.base.lower_danger(kill_count)
             elif action_roll > 5:
                 self.injured = True
                 if infection_roll < 20:
@@ -337,6 +348,9 @@ class Base:
         self.defense = 3
         self.danger = 1
 
+    #
+    #   Returns important information about the base every day (before player actions)
+    #
     def status_report(self):
         print 'There are ' + str(self.population) + ' of us left.'
         print 'We have ' + str(self.supplies) + ' days of food and water.'
@@ -344,13 +358,16 @@ class Base:
         print 'Our defenses will hold for ' + str(int(math.floor(self.defense / self.danger))) + ' more nights.' +\
               ' (' + str(self.defense) + ' defense / ' + str(self.danger) + ' danger)\n'
 
+    #
+    #   Simulates night time and supply use (after player actions)
+    #
     def consume_supplies(self):
         self.supplies -= 1
         self.defense -= self.danger
 
         danger_roll = random.randint(0, 100)
 
-        if danger_roll > 50:
+        if danger_roll > 33:
             self.danger += 1
             print 'The horde of ' + self.game.monsters + ' is getting thicker ...'
 
@@ -384,7 +401,17 @@ class Base:
         else:
             print 'We had enough for everyone to eat tonight.'
 
+    #
+    #   Lowers the danger level, resetting it to 1 as necessary
+    #
+    def lower_danger(self, amount):
+        self.danger -= amount
+        if self.danger < 1:
+            self.danger = 1
 
+#
+#   Starts the game after a brief setup
+#
 def main():
     print '----- HELLO APOCALYPSE -----'
     print 'Welcome to Hello Apocalypse!'
